@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>跨期选择实验</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #f0f7ff, #e6f0fa);
+      margin: 0;
+      padding: 0;
+      color: #2d3748;
+    }
+
+    /* 指导语页面：全屏居中 */
+    #intro {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 40px;
+      box-sizing: border-box;
+      background: white;
+      max-width: 1000px;
+      margin: 0 auto;
+      box-shadow: 0 0 30px rgba(0,0,0,0.08);
+    }
+    #intro h2 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #1a365d;
+    }
+    #intro p, #intro ul {
+      font-size: 22px;
+      line-height: 1.7;
+      margin: 12px 0;
+      max-width: 800px;
+    }
+    #intro ul {
+      text-align: left;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 40px;
+    }
+    #intro input[type="text"] {
+      font-size: 22px;
+      padding: 12px 20px;
+      border: 2px solid #cbd5e0;
+      border-radius: 10px;
+      text-align: center;
+      width: 180px;
+      margin-top: 10px;
+    }
+    #intro button {
+      margin-top: 30px;
+      padding: 14px 40px;
+      font-size: 22px;
+      border: none;
+      border-radius: 12px;
+      background: #3182ce;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #intro button:hover {
+      background: #2c5aa0;
+    }
+
+    /* 过渡页面（练习结束） */
+    #transition {
+      display: none;
+      text-align: center;
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 50px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    #transition h2 {
+      font-size: 28px;
+      color: #2b6cb0;
+      margin-bottom: 20px;
+    }
+    #transition p {
+      font-size: 22px;
+      margin: 15px 0;
+    }
+    #transition button {
+      margin-top: 25px;
+      padding: 14px 40px;
+      font-size: 22px;
+      border: none;
+      border-radius: 12px;
+      background: #3182ce;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #transition button:hover {
+      background: #2c5aa0;
+    }
+
+    /* 实验题目界面 */
+    #experimentContainer {
+      display: none; /* 初始隐藏 */
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .panel {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    .question-header {
+      text-align: center;
+      margin-bottom: 35px;
+      padding-bottom: 12px;
+      border-bottom: 2px dashed #e2e8f0;
+    }
+    #instructionText {
+      font-size: 24px;
+      color: #2b6cb0;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    #progressText {
+      font-size: 22px;
+      color: #718096;
+      margin-top: 8px;
+    }
+
+    .options-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    .option {
+      flex: 1;
+      padding: 35px 25px;
+      background: #f8fafc;
+      border: 3px solid #cbd5e0;
+      border-radius: 16px;
+      font-size: 22px;
+      line-height: 1.6;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.25s ease;
+      user-select: none;
+    }
+    .option:hover {
+      background: #edf2f7;
+      border-color: #a0aec0;
+      transform: translateY(-4px);
+    }
+    .option.selected {
+      border-color: #38a169;
+      background: #f0fff4;
+      box-shadow: 0 6px 16px rgba(68, 189, 127, 0.25);
+      font-weight: bold;
+    }
+
+    .controls {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .controls button {
+      margin: 0 20px;
+      padding: 14px 36px;
+      font-size: 22px;
+      border: none;
+      border-radius: 12px;
+      background: #4299e1;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .controls button:hover:not(:disabled) {
+      background: #2b6cb0;
+    }
+    .controls button:disabled {
+      background: #cbd5e0;
+      color: #a0aec0;
+      cursor: not-allowed;
+    }
+
+    /* 完成页面 */
+    #finish {
+      display: none;
+      text-align: center;
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 50px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    #finish h2 {
+      font-size: 28px;
+      color: #2f855a;
+      margin-bottom: 20px;
+    }
+    #finish p {
+      font-size: 22px;
+      margin: 12px 0;
+    }
+    #finish button {
+      margin-top: 25px;
+      padding: 14px 40px;
+      font-size: 22px;
+      border: none;
+      border-radius: 12px;
+      background: #38a169;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 指导语页面（初始显示） -->
+<div id="intro">
+  <h2>欢迎您参加本实验！</h2>
+  <p>您的参与对我们的研究非常重要。</p>
+  <p>本研究不会涉及任何潜在风险，所有信息将严格保密，仅用于学术研究，您的回答将匿名保存。</p>
+  <p>请您根据真实感受回答问题。</p>
+  <p>实验中的所有题目没有对错之分，请确保认真、完整地做答。</p>
+  <ul style="list-style-type: disc;">
+    <li>前 <strong>6 道为练习题</strong>（用于熟悉任务，不记录数据）；</li>
+    <li>随后是 <strong>正式题目</strong>（数据将被记录）；</li>
+  </ul>
+  <p>请根据您的真实偏好，点击您更愿意接受的选项，然后点击“下一题”继续。</p>
+
+  <br>
+  <label for="pid" style="font-size:22px;">请输入您的参与者编号（例如：P001）：</label><br>
+  <input type="text" id="pid" placeholder="P001">
+
+  <button onclick="startExperiment()">开始练习</button>
+</div>
+
+<!-- 过渡页面：练习结束 -->
+<div id="transition">
+  <h2>练习阶段已完成！</h2>
+  <p>您已熟悉实验流程。</p>
+  <p><strong>接下来将进入正式实验环节。</strong></p>
+  <p style="color:#e53e3e;">请根据您的真实偏好认真作答，数据将被记录用于研究分析。</p>
+  <button onclick="startFormalExperiment()">开始正式实验</button>
+</div>
+
+<!-- 实验主界面（初始隐藏） -->
+<div id="experimentContainer">
+  <div class="panel" id="questionArea">
+    <div class="question-header">
+      <div id="instructionText">请根据您的真实偏好选择一个选项。</div>
+      <div id="progressText"></div> <!-- 仅练习时显示 -->
+    </div>
+    <div class="options-container">
+      <div class="option" id="optA" onclick="choose('A')"></div>
+      <div class="option" id="optB" onclick="choose('B')"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn" onclick="goPrev()" disabled>上一题</button>
+    <button id="nextBtn" onclick="goNext()" disabled>下一题</button>
+  </div>
+</div>
+
+<!-- 完成页面 -->
+<div id="finish">
+  <h2>实验已完成！</h2>
+  <p>感谢您的认真参与！</p>
+  <p style="color:#e53e3e;"><strong>请将数据文件保存到您的桌面（D:\桌面）以便后续分析。</strong></p>
+  <button onclick="downloadData()">下载实验数据</button>
+</div>
+
+<script>
+// ===== 练习题（6题，顺序固定）=====
+const practiceTrials = [
+  { delayMonth: 1, A_now: 10, A_delay: 0, B_now: 0, B_delay: 11 },
+  { delayMonth: 1, A_now: -10, A_delay: 0, B_now: 0, B_delay: -11 },
+  { delayMonth: 3, A_now: 50, A_delay: 0, B_now: 0, B_delay: 55 },
+  { delayMonth: 3, A_now: -30, A_delay: 0, B_now: 0, B_delay: -33 },
+  { delayMonth: 1, A_now: 0, A_delay: 20, B_now: 18, B_delay: 0 },
+  { delayMonth: 3, A_now: 0, A_delay: -40, B_now: -35, B_delay: 0 }
+];
+
+// ===== 正式题（144题）=====
+const formalTrialsRaw = [
+  // 前72题：1个月延迟
+  {delayMonth:1, A_now:20, A_delay:0, B_now:15, B_delay:5},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:16, B_delay:4},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:18, B_delay:2},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:19, B_delay:1},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:25, B_delay:-5},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:26, B_delay:-6},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:30, B_delay:-10},
+  {delayMonth:1, A_now:20, A_delay:0, B_now:35, B_delay:-15},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:-5, B_delay:-15},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:-6, B_delay:-14},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:-8, B_delay:-12},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:-9, B_delay:-11},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:5, B_delay:-25},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:6, B_delay:-26},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:10, B_delay:-30},
+  {delayMonth:1, A_now:0, A_delay:-20, B_now:15, B_delay:-35},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:30, B_delay:10},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:32, B_delay:8},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:36, B_delay:4},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:38, B_delay:2},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:50, B_delay:-10},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:52, B_delay:-12},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:60, B_delay:-20},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:70, B_delay:-30},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:-10, B_delay:-30},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:-12, B_delay:-28},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:-16, B_delay:-24},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:-18, B_delay:-22},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:10, B_delay:-50},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:12, B_delay:-52},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:20, B_delay:-60},
+  {delayMonth:1, A_now:0, A_delay:-40, B_now:30, B_delay:-70},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:45, B_delay:15},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:48, B_delay:12},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:54, B_delay:6},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:57, B_delay:3},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:75, B_delay:-15},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:78, B_delay:-18},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:90, B_delay:-30},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:105, B_delay:-45},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:-15, B_delay:-45},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:-18, B_delay:-42},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:-24, B_delay:-36},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:-27, B_delay:-33},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:15, B_delay:-75},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:18, B_delay:-78},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:30, B_delay:-90},
+  {delayMonth:1, A_now:0, A_delay:-60, B_now:45, B_delay:-105},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:60, B_delay:20},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:64, B_delay:16},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:72, B_delay:8},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:76, B_delay:4},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:100, B_delay:-20},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:104, B_delay:-24},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:120, B_delay:-40},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:140, B_delay:-60},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:-20, B_delay:-60},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:-24, B_delay:-56},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:-32, B_delay:-48},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:-36, B_delay:-44},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:20, B_delay:-100},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:24, B_delay:-104},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:40, B_delay:-120},
+  {delayMonth:1, A_now:0, A_delay:-80, B_now:60, B_delay:-140},
+  {delayMonth:1, A_now:200, A_delay:0, B_now:0, B_delay:260},
+  {delayMonth:1, A_now:400, A_delay:0, B_now:0, B_delay:520},
+  {delayMonth:1, A_now:600, A_delay:0, B_now:0, B_delay:780},
+  {delayMonth:1, A_now:800, A_delay:0, B_now:0, B_delay:1040},
+  {delayMonth:1, A_now:0, A_delay:-200, B_now:-160, B_delay:0},
+  {delayMonth:1, A_now:0, A_delay:-400, B_now:-320, B_delay:0},
+  {delayMonth:1, A_now:0, A_delay:-600, B_now:-480, B_delay:0},
+  {delayMonth:1, A_now:0, A_delay:-800, B_now:-640, B_delay:0},
+
+  // 后72题：3个月延迟
+  {delayMonth:3, A_now:200, A_delay:0, B_now:150, B_delay:50},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:160, B_delay:40},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:180, B_delay:20},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:190, B_delay:10},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:250, B_delay:-50},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:260, B_delay:-60},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:300, B_delay:-100},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:350, B_delay:-150},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:-50, B_delay:-150},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:-60, B_delay:-140},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:-80, B_delay:-120},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:-90, B_delay:-110},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:50, B_delay:-250},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:60, B_delay:-260},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:100, B_delay:-300},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:150, B_delay:-350},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:300, B_delay:100},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:320, B_delay:80},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:360, B_delay:40},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:380, B_delay:20},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:500, B_delay:-100},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:520, B_delay:-120},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:600, B_delay:-200},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:700, B_delay:-300},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:-100, B_delay:-300},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:-120, B_delay:-280},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:-160, B_delay:-240},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:-180, B_delay:-220},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:100, B_delay:-500},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:120, B_delay:-520},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:200, B_delay:-600},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:300, B_delay:-700},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:450, B_delay:150},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:480, B_delay:120},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:540, B_delay:60},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:570, B_delay:30},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:750, B_delay:-150},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:780, B_delay:-180},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:900, B_delay:-300},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:1050, B_delay:-450},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:-150, B_delay:-450},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:-180, B_delay:-420},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:-240, B_delay:-360},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:-270, B_delay:-330},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:150, B_delay:-750},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:180, B_delay:-780},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:300, B_delay:-900},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:450, B_delay:-1050},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:600, B_delay:200},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:640, B_delay:160},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:720, B_delay:80},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:760, B_delay:40},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:1000, B_delay:-200},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:1040, B_delay:-240},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:1200, B_delay:-400},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:1400, B_delay:-600},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:-200, B_delay:-600},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:-240, B_delay:-560},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:-320, B_delay:-480},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:-360, B_delay:-440},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:200, B_delay:-1000},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:240, B_delay:-1040},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:400, B_delay:-1200},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:600, B_delay:-1400},
+  {delayMonth:3, A_now:200, A_delay:0, B_now:0, B_delay:260},
+  {delayMonth:3, A_now:400, A_delay:0, B_now:0, B_delay:520},
+  {delayMonth:3, A_now:600, A_delay:0, B_now:0, B_delay:780},
+  {delayMonth:3, A_now:800, A_delay:0, B_now:0, B_delay:1040},
+  {delayMonth:3, A_now:0, A_delay:-200, B_now:-160, B_delay:0},
+  {delayMonth:3, A_now:0, A_delay:-400, B_now:-320, B_delay:0},
+  {delayMonth:3, A_now:0, A_delay:-600, B_now:-480, B_delay:0},
+  {delayMonth:3, A_now:0, A_delay:-800, B_now:-640, B_delay:0}
+];
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let trials = [];
+let responses = [];
+let currentIndex = -1;
+let pid = "";
+
+function formatOption(now, delay, delayMonth) {
+  const timeStr = delayMonth === 1 ? "1个月后" : "3个月后";
+  const nowText = now >= 0 ? `现在获得 ${now} 元` : `现在支付 ${-now} 元`;
+  const delayText = delay >= 0 ? `${timeStr}获得 ${delay} 元` : `${timeStr}支付 ${-delay} 元`;
+  return `${nowText}，${delayText}`;
+}
+
+function startExperiment() {
+  pid = document.getElementById("pid").value.trim();
+  if (!pid) {
+    alert("请输入参与者编号！");
+    return;
+  }
+
+  const practice = practiceTrials.map(t => ({...t, isPractice: true}));
+  const formalShuffled = shuffleArray(formalTrialsRaw).map(t => ({...t, isPractice: false}));
+
+  trials = [...practice, ...formalShuffled];
+  responses = new Array(trials.length).fill(null);
+
+  document.getElementById("intro").style.display = "none";
+  document.getElementById("experimentContainer").style.display = "block";
+
+  showQuestion(0);
+}
+
+function startFormalExperiment() {
+  document.getElementById("transition").style.display = "none";
+  document.getElementById("experimentContainer").style.display = "block";
+  showQuestion(practiceTrials.length); // 跳过练习题，从正式题第1题开始
+}
+
+function showQuestion(index) {
+  currentIndex = index;
+  const trial = trials[index];
+  const instructionText = document.getElementById("instructionText");
+  const progressText = document.getElementById("progressText");
+
+  // 始终显示统一提示语
+  instructionText.textContent = "请根据您的真实偏好选择一个选项.";
+
+  // 练习题显示进度，正式题隐藏进度
+  if (trial.isPractice) {
+    progressText.textContent = `练习题 第 ${index + 1} / 6 题`;
+    progressText.style.display = "block";
+  } else {
+    progressText.style.display = "none"; // 正式题不显示进度
+  }
+
+  const optA = document.getElementById("optA");
+  const optB = document.getElementById("optB");
+
+  optA.textContent = formatOption(trial.A_now, trial.A_delay, trial.delayMonth);
+  optB.textContent = formatOption(trial.B_now, trial.B_delay, trial.delayMonth);
+
+  optA.classList.remove("selected");
+  optB.classList.remove("selected");
+
+  document.getElementById("prevBtn").disabled = (index === 0);
+  document.getElementById("nextBtn").disabled = (responses[index] === null);
+}
+
+function choose(choice) {
+  document.querySelectorAll(".option").forEach(el => el.classList.remove("selected"));
+  document.getElementById(`opt${choice}`).classList.add("selected");
+  responses[currentIndex] = choice;
+  document.getElementById("nextBtn").disabled = false;
+}
+
+function goPrev() {
+  if (currentIndex > 0) showQuestion(currentIndex - 1);
+}
+
+function goNext() {
+  if (responses[currentIndex] === null) {
+    alert("请先选择一个选项！");
+    return;
+  }
+
+  // 如果刚完成最后一道练习题（index = 5）
+  if (currentIndex === practiceTrials.length - 1) {
+    document.getElementById("experimentContainer").style.display = "none";
+    document.getElementById("transition").style.display = "block";
+    return;
+  }
+
+  // 否则继续下一题
+  if (currentIndex < trials.length - 1) {
+    showQuestion(currentIndex + 1);
+  } else {
+    // 实验全部完成
+    document.getElementById("experimentContainer").style.display = "none";
+    document.getElementById("finish").style.display = "block";
+
+    // 生成并下载数据（仅正式题）
+    let csv = "participant_id,trial_index,delay_month,A_now,A_delay,B_now,B_delay,choice\n";
+    for (let i = practiceTrials.length; i < trials.length; i++) {
+      const t = trials[i];
+      const choice = responses[i] || "none";
+      csv += `"${pid}",${i - practiceTrials.length + 1},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice}\n`;
+    }
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${pid}_time_choice_data.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+function downloadData() {
+  goNext(); // 触发最终下载
+}
+</script>
+
+</body>
+</html>
