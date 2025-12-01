@@ -584,7 +584,7 @@ function goNext() {
 // ✅ 修复版：确保倒计时结束后正确跳转
 function showRestPage() {
   if (countdownInterval) clearInterval(countdownInterval);
-  
+
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("rest").style.display = "block";
 
@@ -595,7 +595,7 @@ function showRestPage() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     countdownText.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    
+
     if (seconds <= 0) {
       clearInterval(countdownInterval);
       resumeAfterRest();
@@ -612,7 +612,7 @@ function resumeAfterRest() {
   // ✅ 关键修复：显式显示实验界面
   document.getElementById("rest").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
-  
+
   // 进入下一题
   if (currentIndex + 1 < trials.length) {
     showQuestion(currentIndex + 1);
