@@ -64,7 +64,7 @@
     button:hover { background: #2c5aa0; }
     button:disabled { background: #cbd5e0; cursor: not-allowed; }
 
-    /* 过渡与结束页面 */
+    /* 过渡与结束页面 —— 字体加大 */
     #transition, #finish {
       display: none;
       background: white;
@@ -74,6 +74,22 @@
       border-radius: 20px;
       box-shadow: 0 8px 25px rgba(0,0,0,0.1);
       text-align: center;
+    }
+    #transition h2,
+    #finish h2 {
+      font-size: 32px;
+      color: #1a365d;
+      margin-bottom: 20px;
+    }
+    #transition p,
+    #finish p {
+      font-size: 24px;
+      line-height: 1.6;
+      margin: 12px 0;
+      color: #2d3748;
+    }
+    #finish p strong {
+      color: #e53e3e;
     }
 
     /* 实验主界面 */
@@ -109,14 +125,14 @@
     .options-container {
       display: flex;
       justify-content: space-between;
-      gap: 40px; /* 左右选项之间的距离 */
+      gap: 40px;
       margin-top: 20px;
     }
 
     /* 单个选项卡片 */
     .option-container {
       flex: 1;
-      max-width: 500px; /* 限制每个选项的最大宽度 */
+      max-width: 500px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -130,12 +146,12 @@
       transition: all 0.2s ease;
       user-select: none;
       display: flex;
-      flex-direction: column; /* 内部垂直布局 */
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 30px 10px;
-      min-height: 200px; /* 保证高度 */
-      width: 100%; /* 保证选项宽度占满可用区域 */
+      min-height: 200px;
+      width: 100%;
     }
     .option:hover {
       background: #edf2f7;
@@ -156,7 +172,6 @@
       text-align: center;
       padding: 15px 0;
     }
-    /* 上方时间点与下方时间点之间的分隔与间距 */
     .option-row.top {
       border-bottom: 2px dashed #e2e8f0;
       margin-bottom: 10px;
@@ -168,7 +183,7 @@
     /* 关键词高亮样式 */
     .highlight-keyword {
       font-weight: bold;
-      color: #e53e3e; /* 红色 */
+      color: #e53e3e;
       font-size: 1.1em;
     }
     .amount-text {
@@ -184,23 +199,6 @@
       font-weight: bold;
       text-align: center;
     }
-
-    /* 抽签结果展示区域 */
-    .lottery-box {
-      margin-top: 30px;
-      padding: 20px;
-      border: 2px dashed #38a169;
-      background: #f0fff4;
-      border-radius: 15px;
-      display: inline-block;
-    }
-    .lottery-number {
-      font-size: 48px;
-      color: #c53030;
-      font-weight: bold;
-      margin: 10px 0;
-    }
-
   </style>
 </head>
 <body>
@@ -214,7 +212,7 @@
     <li>前 <strong>6 道为练习题</strong>（用于熟悉任务）；</li>
     <li>随后是 <strong>正式题目</strong>（数据将被记录）；</li>
     <li>实验结束后，请将实验数据下载并上传到本问卷“选择文件”端口，收到数据后将第一时间审核问卷为您发放实验报酬。</li>
-      </ul>
+  </ul>
   <p><strong>任务说明：</strong><br>
      屏幕上将出现左右两个选项。每个选项包含两个时间点的金额变动（上方为“现在”，下方为“未来”）。<br>
      请仔细观看，点击您更偏好的选项，然后系统会自动进入下一题。
@@ -244,22 +242,14 @@
       <div id="progressText"></div>
     </div>
 
-    <!-- 选项容器：改为左右各一个大框，内部上下两行 -->
     <div class="options-container">
-      <!-- 选项 A -->
       <div class="option-container">
         <div class="label">选项 A</div>
-        <div class="option" id="optA" onclick="chooseAndNext('A')">
-          <!-- 内容将由JS动态生成 -->
-        </div>
+        <div class="option" id="optA" onclick="chooseAndNext('A')"></div>
       </div>
-
-      <!-- 选项 B -->
       <div class="option-container">
         <div class="label">选项 B</div>
-        <div class="option" id="optB" onclick="chooseAndNext('B')">
-          <!-- 内容将由JS动态生成 -->
-        </div>
+        <div class="option" id="optB" onclick="chooseAndNext('B')"></div>
       </div>
     </div>
   </div>
@@ -269,19 +259,11 @@
   </div>
 </div>
 
-<!-- 4. 完成页面 + 抽签 -->
+<!-- 4. 完成页面（无抽签） -->
 <div id="finish">
   <h2>实验已完成！</h2>
   <p>感谢您的认真参与！</p>
-
-  <!-- 抽签区域 -->
-  <div class="lottery-box">
-    <p style="font-size:22px; margin:0;">您的幸运抽签数字是：</p>
-    <div class="lottery-number" id="lotteryResult">?</div>
-    <p style="font-size:18px; color:#718096;">(范围：1 - 5)</p>
-  </div>
-
-  <p style="color:#e53e3e; margin-top:30px;"><strong>请将数据文件保存到本地并将数据上传到问卷“选择文件”端口。</strong></p>
+  <p><strong>请将数据文件保存到本地并将数据上传到问卷“选择文件”端口。</strong></p>
   <button onclick="downloadData()">下载实验数据</button>
 </div>
 
@@ -296,9 +278,8 @@ const practiceTrials = [
   { delayMonth: 3, A_now: 0, A_delay: -40, B_now: -35, B_delay: 0 }
 ];
 
-// ===== 正式题列表 =====
+// ===== 正式题列表（共96题）=====
 const formalTrialsRaw = [
-  // 这里是144道实验的完整列表，分成不同类型可以帮助理解和管理数据
   // 1个月延迟 获得
   {delayMonth:1, A_now:20, A_delay:0, B_now:15, B_delay:5},
   {delayMonth:1, A_now:20, A_delay:0, B_now:16, B_delay:4},
@@ -446,9 +427,7 @@ const formalTrialsRaw = [
   {delayMonth:3, A_now:0, A_delay:-400, B_now:-320, B_delay:0},
   {delayMonth:3, A_now:0, A_delay:-600, B_now:-480, B_delay:0},
   {delayMonth:3, A_now:0, A_delay:-800, B_now:-640, B_delay:0}
-];
-
-
+].map((t, i) => ({ ...t, id: i })); // 添加唯一ID
 
 function shuffleArray(array) {
   const arr = [...array];
@@ -463,22 +442,18 @@ let trials = [];
 let responses = [];
 let currentIndex = -1;
 let pid = "";
-let isClickable = true; // 防止重复点击
+let isClickable = true;
 
-// 生成带格式的HTML字符串：两行布局
 function generateOptionHTML(nowVal, delayVal, delayMonth) {
-  // 处理“现在”部分
   let nowAction = nowVal >= 0 ? "获得" : "支付";
   let nowAmount = Math.abs(nowVal);
   let nowHtml = `现在 <span class="highlight-keyword">${nowAction}</span> <span class="amount-text">${nowAmount}</span> 元`;
 
-  // 处理“延迟”部分
   let timeStr = delayMonth === 1 ? "1个月后" : "3个月后";
   let delayAction = delayVal >= 0 ? "获得" : "支付";
   let delayAmount = Math.abs(delayVal);
   let delayHtml = `${timeStr} <span class="highlight-keyword">${delayAction}</span> <span class="amount-text">${delayAmount}</span> 元`;
 
-  // 拼接上下两行
   return `
     <div class="option-row top">${nowHtml}</div>
     <div class="option-row bottom">${delayHtml}</div>
@@ -492,10 +467,12 @@ function startExperiment() {
     return;
   }
 
-  // 准备题目
-  const practice = practiceTrials.map(t => ({...t, isPractice: true}));
-  // 注意：这里应该使用完整的formalTrialsRaw
-  const formalShuffled = shuffleArray(formalTrialsRaw).map(t => ({...t, isPractice: false}));
+  const practice = practiceTrials.map(t => ({...t, isPractice: true, swap: false }));
+  const formalShuffled = shuffleArray(formalTrialsRaw).map(t => ({
+    ...t,
+    isPractice: false,
+    swap: Math.random() < 0.5
+  }));
 
   trials = [...practice, ...formalShuffled];
   responses = new Array(trials.length).fill(null);
@@ -509,71 +486,85 @@ function startExperiment() {
 function startFormalExperiment() {
   document.getElementById("transition").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
-  // 跳过练习题，从正式题第一题开始
   showQuestion(practiceTrials.length);
 }
 
 function showQuestion(index) {
   currentIndex = index;
-  isClickable = true; // 允许点击
+  isClickable = true;
   const trial = trials[index];
   const progressText = document.getElementById("progressText");
 
-  // 进度显示
   if (trial.isPractice) {
     progressText.textContent = `练习题 ${index + 1} / ${practiceTrials.length}`;
-    progressText.style.display = "block";
   } else {
-    // 正式实验通常不显示进度以免产生疲劳感，或者显示总进度
     const formalIndex = index - practiceTrials.length + 1;
     const totalFormal = trials.length - practiceTrials.length;
     progressText.textContent = `进度：${formalIndex} / ${totalFormal}`;
-    progressText.style.display = "block";
   }
 
   const optA = document.getElementById("optA");
   const optB = document.getElementById("optB");
+  const labelA = document.querySelector('.option-container:first-child .label');
+  const labelB = document.querySelector('.option-container:last-child .label');
 
-  // 渲染内容：上下两行结构
-  optA.innerHTML = generateOptionHTML(trial.A_now, trial.A_delay, trial.delayMonth);
-  optB.innerHTML = generateOptionHTML(trial.B_now, trial.B_delay, trial.delayMonth);
+  let leftOption, rightOption;
+  let leftLabel, rightLabel;
 
-  // 重置样式
+  if (trial.swap && !trial.isPractice) {
+    leftOption = generateOptionHTML(trial.B_now, trial.B_delay, trial.delayMonth);
+    rightOption = generateOptionHTML(trial.A_now, trial.A_delay, trial.delayMonth);
+    leftLabel = "选项 B";
+    rightLabel = "选项 A";
+  } else {
+    leftOption = generateOptionHTML(trial.A_now, trial.A_delay, trial.delayMonth);
+    rightOption = generateOptionHTML(trial.B_now, trial.B_delay, trial.delayMonth);
+    leftLabel = "选项 A";
+    rightLabel = "选项 B";
+  }
+
+  optA.innerHTML = leftOption;
+  optB.innerHTML = rightOption;
+  labelA.textContent = leftLabel;
+  labelB.textContent = rightLabel;
+
   optA.classList.remove("selected");
   optB.classList.remove("selected");
 }
 
-// 点击选择并自动跳转
 function chooseAndNext(choice) {
-  if (!isClickable) return; // 防止连点
+  if (!isClickable) return;
   isClickable = false;
 
-  // 记录数据
-  responses[currentIndex] = choice;
+  const trial = trials[currentIndex];
+  let actualChoice;
 
-  // 视觉反馈
+  if (trial.isPractice) {
+    actualChoice = choice;
+  } else {
+    actualChoice = trial.swap ? (choice === 'A' ? 'B' : 'A') : choice;
+  }
+
+  responses[currentIndex] = actualChoice;
+
   document.querySelectorAll(".option").forEach(el => el.classList.remove("selected"));
   document.getElementById(`opt${choice}`).classList.add("selected");
 
-  // 延迟 300ms 后进入下一题，给用户一点视觉确认时间
   setTimeout(() => {
     goNext();
   }, 300);
 }
 
 function goNext() {
-  // 如果刚完成最后一道练习题
   if (currentIndex === practiceTrials.length - 1) {
     document.getElementById("experimentContainer").style.display = "none";
     document.getElementById("transition").style.display = "block";
     return;
   }
 
-  // 继续下一题
   if (currentIndex < trials.length - 1) {
     showQuestion(currentIndex + 1);
   } else {
-    // 实验全部完成
     finishExperiment();
   }
 }
@@ -581,28 +572,22 @@ function goNext() {
 function finishExperiment() {
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("finish").style.display = "block";
-
-  // --- 抽签逻辑 ---
-  // 抽取 8 到 15 之间的整数
-  // Math.random() * (max - min + 1) + min
-  const min = 8;
-  const max = 15;
-  const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-
-  // 显示随机数
-  document.getElementById("lotteryResult").innerText = randomNum;
 }
 
 function downloadData() {
   let csv = "participant_id,trial_index,delay_month,A_now,A_delay,B_now,B_delay,choice\n";
 
-  // 仅导出正式实验数据
+  const responseMap = new Map();
   for (let i = practiceTrials.length; i < trials.length; i++) {
-    const t = trials[i];
+    const trial = trials[i];
     const choice = responses[i] || "none";
-    // 重新计算正式实验的序号
-    const formalIdx = i - practiceTrials.length + 1;
-    csv += `"${pid}",${formalIdx},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice}\n`;
+    responseMap.set(trial.id, choice);
+  }
+
+  for (let i = 0; i < formalTrialsRaw.length; i++) {
+    const t = formalTrialsRaw[i];
+    const choice = responseMap.get(t.id) || "missing";
+    csv += `"${pid}",${i + 1},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice}\n`;
   }
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -619,6 +604,3 @@ function downloadData() {
 
 </body>
 </html>
-
-
-
