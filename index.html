@@ -13,7 +13,6 @@
       color: #2d3748;
     }
 
-    /* 通用容器样式 */
     .container-box {
       display: flex;
       flex-direction: column;
@@ -25,7 +24,6 @@
       box-sizing: border-box;
     }
 
-    /* 指导语页面 */
     #intro {
       background: white;
       max-width: 1000px;
@@ -48,7 +46,6 @@
       margin-top: 20px;
     }
 
-    /* 按钮通用样式 */
     button {
       margin-top: 30px;
       padding: 14px 40px;
@@ -64,8 +61,7 @@
     button:hover { background: #2c5aa0; }
     button:disabled { background: #cbd5e0; cursor: not-allowed; }
 
-    /* 过渡与结束页面 —— 字体加大 */
-    #transition, #finish {
+    #transition, #finish, #rest {
       display: none;
       background: white;
       max-width: 900px;
@@ -76,13 +72,15 @@
       text-align: center;
     }
     #transition h2,
-    #finish h2 {
+    #finish h2,
+    #rest h2 {
       font-size: 32px;
       color: #1a365d;
       margin-bottom: 20px;
     }
     #transition p,
-    #finish p {
+    #finish p,
+    #rest p {
       font-size: 24px;
       line-height: 1.6;
       margin: 12px 0;
@@ -91,8 +89,12 @@
     #finish p strong {
       color: #e53e3e;
     }
+    #countdownText {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2b6cb0;
+    }
 
-    /* 实验主界面 */
     #experimentContainer {
       display: none;
       max-width: 1200px;
@@ -121,7 +123,6 @@
       margin-top: 10px;
     }
 
-    /* 选项容器：左右布局 */
     .options-container {
       display: flex;
       justify-content: space-between;
@@ -129,7 +130,6 @@
       margin-top: 20px;
     }
 
-    /* 单个选项卡片 */
     .option-container {
       flex: 1;
       max-width: 500px;
@@ -164,7 +164,6 @@
       box-shadow: 0 6px 16px rgba(68, 189, 127, 0.25);
     }
 
-    /* 选项内部文字样式：两行布局 */
     .option-row {
       font-size: 24px;
       line-height: 1.5;
@@ -180,7 +179,6 @@
       margin-top: 10px;
     }
 
-    /* 关键词高亮样式 */
     .highlight-keyword {
       font-weight: bold;
       color: #e53e3e;
@@ -191,7 +189,6 @@
       margin: 0 5px;
     }
 
-    /* 选择标注 */
     .label {
       font-size: 20px;
       color: #2b6cb0;
@@ -203,7 +200,6 @@
 </head>
 <body>
 
-<!-- 1. 指导语页面 -->
 <div id="intro" class="container-box" style="min-height:auto;">
   <h2>欢迎您参加本实验！</h2>
   <p>您的参与对我们的研究非常重要。</p>
@@ -225,7 +221,6 @@
   <button onclick="startExperiment()">开始练习</button>
 </div>
 
-<!-- 2. 过渡页面：练习结束 -->
 <div id="transition">
   <h2>练习阶段已完成！</h2>
   <p>您已熟悉实验流程。</p>
@@ -234,7 +229,13 @@
   <button onclick="startFormalExperiment()">开始正式实验</button>
 </div>
 
-<!-- 3. 实验主界面 -->
+<div id="rest">
+  <h2>请稍作休息</h2>
+  <p style="font-size:24px; color:#e53e3e;">您已完成一组题目，请休息片刻。</p>
+  <p id="countdownText">1:00</p>
+  <p style="font-size:20px; color:#718096;">倒计时结束后将自动继续实验</p>
+</div>
+
 <div id="experimentContainer">
   <div class="panel" id="questionArea">
     <div class="question-header">
@@ -259,7 +260,6 @@
   </div>
 </div>
 
-<!-- 4. 完成页面（无抽签） -->
 <div id="finish">
   <h2>实验已完成！</h2>
   <p>感谢您的认真参与！</p>
@@ -278,7 +278,7 @@ const practiceTrials = [
   { delayMonth: 3, A_now: 0, A_delay: -40, B_now: -35, B_delay: 0 }
 ];
 
-// ===== 正式题列表（共96题）=====
+// ===== 正式题（144题）=====
 const formalTrialsRaw = [
   // 1个月延迟 获得
   {delayMonth:1, A_now:20, A_delay:0, B_now:15, B_delay:5},
@@ -427,7 +427,7 @@ const formalTrialsRaw = [
   {delayMonth:3, A_now:0, A_delay:-400, B_now:-320, B_delay:0},
   {delayMonth:3, A_now:0, A_delay:-600, B_now:-480, B_delay:0},
   {delayMonth:3, A_now:0, A_delay:-800, B_now:-640, B_delay:0}
-].map((t, i) => ({ ...t, id: i })); // 添加唯一ID
+].map((t, i) => ({ ...t, id: i }));
 
 function shuffleArray(array) {
   const arr = [...array];
@@ -443,6 +443,8 @@ let responses = [];
 let currentIndex = -1;
 let pid = "";
 let isClickable = true;
+let countdownInterval = null;
+const REST_INTERVAL = 48;
 
 function generateOptionHTML(nowVal, delayVal, delayMonth) {
   let nowAction = nowVal >= 0 ? "获得" : "支付";
@@ -484,6 +486,7 @@ function startExperiment() {
 }
 
 function startFormalExperiment() {
+  if (countdownInterval) clearInterval(countdownInterval);
   document.getElementById("transition").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
   showQuestion(practiceTrials.length);
@@ -562,7 +565,56 @@ function goNext() {
     return;
   }
 
+  if (!trials[currentIndex].isPractice) {
+    const formalDone = currentIndex - practiceTrials.length + 1;
+    const totalFormal = trials.length - practiceTrials.length;
+    if (formalDone % REST_INTERVAL === 0 && formalDone < totalFormal) {
+      showRestPage();
+      return;
+    }
+  }
+
   if (currentIndex < trials.length - 1) {
+    showQuestion(currentIndex + 1);
+  } else {
+    finishExperiment();
+  }
+}
+
+// ✅ 修复版：确保倒计时结束后正确跳转
+function showRestPage() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  
+  document.getElementById("experimentContainer").style.display = "none";
+  document.getElementById("rest").style.display = "block";
+
+  let seconds = 60;
+  const countdownText = document.getElementById("countdownText");
+
+  function updateCountdown() {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    countdownText.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    
+    if (seconds <= 0) {
+      clearInterval(countdownInterval);
+      resumeAfterRest();
+    } else {
+      seconds--;
+    }
+  }
+
+  updateCountdown();
+  countdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function resumeAfterRest() {
+  // ✅ 关键修复：显式显示实验界面
+  document.getElementById("rest").style.display = "none";
+  document.getElementById("experimentContainer").style.display = "block";
+  
+  // 进入下一题
+  if (currentIndex + 1 < trials.length) {
     showQuestion(currentIndex + 1);
   } else {
     finishExperiment();
