@@ -233,7 +233,8 @@
   <h2>请稍作休息</h2>
   <p style="font-size:24px; color:#e53e3e;">您已完成一组题目，请休息片刻。</p>
   <p id="countdownText">1:00</p>
-  <p style="font-size:20px; color:#718096;">倒计时结束后将自动继续实验</p>
+  <p style="font-size:20px; color:#718096;">倒计时结束后请点击下方按钮继续实验</p>
+  <button id="continueButton" onclick="resumeAfterRest()" style="display:none; margin-top:20px;">开始答题</button>
 </div>
 
 <div id="experimentContainer">
@@ -440,6 +441,7 @@ function shuffleArray(array) {
 
 let trials = [];
 let responses = [];
+let reactionTimes = []; // 记录正式题反应时
 let currentIndex = -1;
 let pid = "";
 let isClickable = true;
@@ -478,6 +480,7 @@ function startExperiment() {
 
   trials = [...practice, ...formalShuffled];
   responses = new Array(trials.length).fill(null);
+  reactionTimes = new Array(trials.length).fill(null);
 
   document.getElementById("intro").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
@@ -504,6 +507,9 @@ function showQuestion(index) {
     const formalIndex = index - practiceTrials.length + 1;
     const totalFormal = trials.length - practiceTrials.length;
     progressText.textContent = `进度：${formalIndex} / ${totalFormal}`;
+
+    // ✅ 仅正式题记录开始时间
+    window.questionStartTime = Date.now();
   }
 
   const optA = document.getElementById("optA");
@@ -546,6 +552,10 @@ function chooseAndNext(choice) {
     actualChoice = choice;
   } else {
     actualChoice = trial.swap ? (choice === 'A' ? 'B' : 'A') : choice;
+
+    // ✅ 保存反应时
+    const rt = Date.now() - window.questionStartTime;
+    reactionTimes[currentIndex] = rt;
   }
 
   responses[currentIndex] = actualChoice;
@@ -581,12 +591,12 @@ function goNext() {
   }
 }
 
-// ✅ 修复版：确保倒计时结束后正确跳转
 function showRestPage() {
   if (countdownInterval) clearInterval(countdownInterval);
 
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("rest").style.display = "block";
+  document.getElementById("continueButton").style.display = "none"; // 初始隐藏
 
   let seconds = 60;
   const countdownText = document.getElementById("countdownText");
@@ -598,7 +608,8 @@ function showRestPage() {
 
     if (seconds <= 0) {
       clearInterval(countdownInterval);
-      resumeAfterRest();
+      // ✅ 倒计时结束，显示“开始答题”按钮
+      document.getElementById("continueButton").style.display = "inline-block";
     } else {
       seconds--;
     }
@@ -609,13 +620,11 @@ function showRestPage() {
 }
 
 function resumeAfterRest() {
-  // ✅ 关键修复：显式显示实验界面
   document.getElementById("rest").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
 
-  // 进入下一题
   if (currentIndex + 1 < trials.length) {
-    showQuestion(currentIndex + 1);
+    showQuestion(currentIndex + 1); // 此刻才开始下一题，并记录 RT
   } else {
     finishExperiment();
   }
@@ -627,19 +636,24 @@ function finishExperiment() {
 }
 
 function downloadData() {
-  let csv = "participant_id,trial_index,delay_month,A_now,A_delay,B_now,B_delay,choice\n";
+  let csv = "participant_id,trial_index,delay_month,A_now,A_delay,B_now,B_delay,choice,reaction_time_ms\n";
 
   const responseMap = new Map();
+  const rtMap = new Map();
+
   for (let i = practiceTrials.length; i < trials.length; i++) {
     const trial = trials[i];
     const choice = responses[i] || "none";
+    const rt = reactionTimes[i] || -1;
     responseMap.set(trial.id, choice);
+    rtMap.set(trial.id, rt);
   }
 
   for (let i = 0; i < formalTrialsRaw.length; i++) {
     const t = formalTrialsRaw[i];
     const choice = responseMap.get(t.id) || "missing";
-    csv += `"${pid}",${i + 1},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice}\n`;
+    const rt = rtMap.get(t.id) || -1;
+    csv += `"${pid}",${i + 1},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice},${rt}\n`;
   }
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
