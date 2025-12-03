@@ -207,6 +207,7 @@
   <ul style="list-style-type: disc;">
     <li>前 <strong>6 道为练习题</strong>（用于熟悉任务）；</li>
     <li>随后是 <strong>正式题目</strong>（数据将被记录）；</li>
+    <li>为防止您答题疲劳，本实验设置了两次休息阶段。</li>
     <li>实验结束后，请将两份实验数据下载并将数据发送到2537695699@qq.com，收到数据后将第一时间审核问卷为您发放实验报酬。</li>
   </ul>
   <p><strong>任务说明：</strong><br>
@@ -215,7 +216,7 @@
   </p>
 
   <br>
-  <label for="pid" style="font-size:22px;">请输入您的所在地+三位随机数字（不要与示例相同）：</label><br>
+  <label for="pid" style="font-size:22px;">请输入您的唯一编号（即“所在地+三位随机数字”，不要与示例相同）：</label><br>
   <input type="text" id="pid" placeholder="例如: 福州321">
 
   <button onclick="startExperiment()">开始练习</button>
@@ -264,13 +265,24 @@
 <div id="finish">
   <h2>实验已完成！</h2>
   <p>感谢您的认真参与！</p>
-  <p><strong>请将以下两个数据文件都保存到本地，并发送到2537695699@qq.com。</strong></p>
+  <p><strong>请尽快将以下两个数据文件都保存到本地，并发送到2537695699@qq.com。</strong></p>
   <button onclick="downloadData()">下载选择结果与元数据</button>
   <br><br>
   <button onclick="downloadTrajectoryData()">下载鼠标轨迹数据</button>
 </div>
 
 <script>
+// ===== 辅助函数：格式化时间为 YYYY-MM-DD HH:mm:ss =====
+function formatDateTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 // ===== 练习题（6题）=====
 const practiceTrials = [
   { delayMonth: 1, A_now: 10, A_delay: 0, B_now: 0, B_delay: 11 },
@@ -432,18 +444,19 @@ const formalTrialsRaw = [
   {delayMonth:3, A_now:0, A_delay:-800, B_now:-640, B_delay:0}
 ].map((t, i) => ({ ...t, id: i }));
 
-// ===== 新增：时间点与跳转指标 =====
-let t1 = null; // 正式实验开始
-let t2 = null; // 第一阶段结束（48题）
-let t3 = null; // 第一次休息后开始
-let t4 = null; // 第二阶段结束（96题）
-let t5 = null; // 第二次休息后开始
-let t6 = null; // 第三阶段结束（144题）
+// ===== 时间点（现为可读字符串）=====
+let t1 = ""; // 正式实验开始
+let t2 = ""; // 第一阶段结束（48题）
+let t3 = ""; // 第一次休息后开始
+let t4 = ""; // 第二阶段结束（96题）
+let t5 = ""; // 第二次休息后开始
+let t6 = ""; // 第三阶段结束（144题）
 
+// ===== 跳转行为指标 =====
 let jumpIndicators = {
-  ultraFastRT: [],      // 反应时 < 200ms
-  consecutiveClicks: [],// 连续点击间隔 < 300ms
-  lastChoiceTime: null
+  ultraFastRT: [],      // 反应时 < 200ms 的题目索引
+  consecutiveClicks: [],// 与上一题间隔 < 300ms 的题目索引
+  lastChoiceTime: null  // 上次作答时间戳（毫秒）
 };
 
 function shuffleArray(array) {
@@ -511,7 +524,7 @@ function startFormalExperiment() {
   document.getElementById("transition").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
 
-  t1 = Date.now(); // ✅ 记录 t1
+  t1 = formatDateTime(new Date()); // ✅ 记录 t1（可读时间）
 
   showQuestion(practiceTrials.length);
 }
@@ -568,7 +581,6 @@ function showQuestion(index) {
   optA.classList.remove("selected");
   optB.classList.remove("selected");
 
-  // ✅ 启动鼠标追踪（含 AOI 计算）
   if (!trial.isPractice) {
     requestAnimationFrame(() => {
       window.questionStartTime = Date.now();
@@ -577,19 +589,16 @@ function showQuestion(index) {
   }
 }
 
-// ✅ 增强版：记录 AOI
 function startMouseTracking() {
   const container = document.getElementById("experimentContainer");
   const startTime = window.questionStartTime;
 
-  // 获取当前选项的位置（必须在视觉渲染后）
   const optA = document.getElementById("optA");
   const optB = document.getElementById("optB");
   const containerRect = container.getBoundingClientRect();
   const rectA = optA.getBoundingClientRect();
   const rectB = optB.getBoundingClientRect();
 
-  // 计算每个选项内的 AOI 边界（相对于 container）
   const aoiA = {
     left: rectA.left - containerRect.left,
     right: rectA.right - containerRect.left,
@@ -611,7 +620,6 @@ function startMouseTracking() {
     const y = e.clientY - containerRect.top;
     const t = Date.now() - startTime;
 
-    // 判断 AOI
     let aoi = "none";
     if (x >= aoiA.left && x <= aoiA.right && y >= aoiA.top && y <= aoiA.bottom) {
       aoi = y < aoiA.midY ? "A_now" : "A_future";
@@ -645,7 +653,6 @@ function chooseAndNext(choice) {
     const rt = Date.now() - window.questionStartTime;
     reactionTimes[currentIndex] = rt;
 
-    // ✅ 跳转指标：超快反应
     if (rt < 200) {
       jumpIndicators.ultraFastRT.push(currentIndex);
     }
@@ -662,11 +669,9 @@ function chooseAndNext(choice) {
 }
 
 function goNext() {
-  const formalIndex = currentIndex - practiceTrials.length + 1; // 当前正式题序号（从1开始）
+  const formalIndex = currentIndex - practiceTrials.length + 1;
 
-  // 检查是否完成某个阶段（每48题一组）
   if (!trials[currentIndex].isPractice) {
-    // ✅ 跳转行为：记录连续点击间隔
     const now = Date.now();
     if (jumpIndicators.lastChoiceTime !== null) {
       const interval = now - jumpIndicators.lastChoiceTime;
@@ -676,24 +681,21 @@ function goNext() {
     }
     jumpIndicators.lastChoiceTime = now;
 
-    // 阶段结束记录
     if (formalIndex === 48) {
-      t2 = Date.now(); // ✅ 第一阶段结束
+      t2 = formatDateTime(new Date()); // ✅
     } else if (formalIndex === 96) {
-      t4 = Date.now(); // ✅ 第二阶段结束
+      t4 = formatDateTime(new Date()); // ✅
     } else if (formalIndex === 144) {
-      t6 = Date.now(); // ✅ 第三阶段结束
+      t6 = formatDateTime(new Date()); // ✅
     }
   }
 
-  // 练习结束
   if (currentIndex === practiceTrials.length - 1) {
     document.getElementById("experimentContainer").style.display = "none";
     document.getElementById("transition").style.display = "block";
     return;
   }
 
-  // 休息点（48, 96）
   if (!trials[currentIndex].isPractice) {
     const totalFormal = trials.length - practiceTrials.length;
     if ((formalIndex % REST_INTERVAL === 0) && formalIndex < totalFormal) {
@@ -745,9 +747,9 @@ function resumeAfterRest() {
 
   const formalDone = currentIndex - practiceTrials.length + 1;
   if (formalDone === 48) {
-    t3 = Date.now(); // ✅ 第一次休息后开始
+    t3 = formatDateTime(new Date()); // ✅
   } else if (formalDone === 96) {
-    t5 = Date.now(); // ✅ 第二次休息后开始
+    t5 = formatDateTime(new Date()); // ✅
   }
 
   if (currentIndex + 1 < trials.length) {
@@ -767,7 +769,7 @@ function finishExperiment() {
   document.getElementById("finish").style.display = "block";
 }
 
-// ✅ 合并选择数据与元数据
+// ✅ 下载主数据（含可读时间 + 跳转指标）
 function downloadData() {
   const ultraFastCount = jumpIndicators.ultraFastRT.length;
   const consecutiveCount = jumpIndicators.consecutiveClicks.length;
@@ -794,7 +796,7 @@ function downloadData() {
     const rt = rtMap.get(t.id) || -1;
 
     csv += `"${pid}",${i + 1},${t.delayMonth},${t.A_now},${t.A_delay},${t.B_now},${t.B_delay},${choice},${rt},` +
-           `${t1 || ""},${t2 || ""},${t3 || ""},${t4 || ""},${t5 || ""},${t6 || ""},` +
+           `"${t1}","${t2}","${t3}","${t4}","${t5}","${t6}",` +
            `${ultraFastCount},${consecutiveCount}\n`;
   }
 
@@ -809,7 +811,7 @@ function downloadData() {
   URL.revokeObjectURL(url);
 }
 
-// ✅ 轨迹下载：保持不变
+// ✅ 下载鼠标轨迹（不变）
 function downloadTrajectoryData() {
   let csv = "participant_id,trial_index,t_ms,x,y,DiffAmount,DiffTime,delay_month,aoi\n";
 
