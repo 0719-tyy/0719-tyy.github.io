@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>跨期选择实验</title>
+  <title>跨期选择实验（含AOI追踪）</title>
   <style>
     body {
       font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
@@ -349,9 +349,9 @@ const formalTrialsRaw = [
   {delayMonth:1, A_now:0, A_delay:-80, B_now:40, B_delay:-120},
   {delayMonth:1, A_now:0, A_delay:-80, B_now:60, B_delay:-140},
   {delayMonth:1, A_now:20, A_delay:0, B_now:0, B_delay:26},
-  {delayMonth:1, A_now:40, A_delay:0, B_now:0, B_delay:40},
-  {delayMonth:1, A_now:60, A_delay:0, B_now:0, B_delay:60},
-  {delayMonth:1, A_now:80, A_delay:0, B_now:0, B_delay:80},
+  {delayMonth:1, A_now:40, A_delay:0, B_now:0, B_delay:52},
+  {delayMonth:1, A_now:60, A_delay:0, B_now:0, B_delay:78},
+  {delayMonth:1, A_now:80, A_delay:0, B_now:0, B_delay:104},
   {delayMonth:1, A_now:0, A_delay:-20, B_now:-16, B_delay:0},
   {delayMonth:1, A_now:0, A_delay:-40, B_now:-32, B_delay:0},
   {delayMonth:1, A_now:0, A_delay:-60, B_now:-48, B_delay:0},
@@ -444,7 +444,7 @@ function shuffleArray(array) {
 let trials = [];
 let responses = [];
 let reactionTimes = [];
-let mouseTrajectories = []; // 新增：存储每题的鼠标轨迹
+let mouseTrajectories = [];
 let currentIndex = -1;
 let pid = "";
 let isClickable = true;
@@ -484,7 +484,7 @@ function startExperiment() {
   trials = [...practice, ...formalShuffled];
   responses = new Array(trials.length).fill(null);
   reactionTimes = new Array(trials.length).fill(null);
-  mouseTrajectories = new Array(trials.length).fill(null).map(() => []); // 初始化轨迹数组
+  mouseTrajectories = new Array(trials.length).fill(null).map(() => []);
 
   document.getElementById("intro").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
@@ -500,7 +500,6 @@ function startFormalExperiment() {
 }
 
 function showQuestion(index) {
-  // 清除上一题的鼠标监听器
   if (window._currentMouseMoveHandler) {
     const prevContainer = document.getElementById("experimentContainer");
     prevContainer.removeEventListener('mousemove', window._currentMouseMoveHandler);
@@ -518,9 +517,6 @@ function showQuestion(index) {
     const formalIndex = index - practiceTrials.length + 1;
     const totalFormal = trials.length - practiceTrials.length;
     progressText.textContent = `进度：${formalIndex} / ${totalFormal}`;
-
-    // ✅ 仅正式题记录开始时间（用于 RT 和轨迹时间基准）
-    window.questionStartTime = Date.now();
   }
 
   const optA = document.getElementById("optA");
@@ -528,52 +524,94 @@ function showQuestion(index) {
   const labelA = document.querySelector('.option-container:first-child .label');
   const labelB = document.querySelector('.option-container:last-child .label');
 
-  let leftOption, rightOption;
+  let leftNow, leftDelay, rightNow, rightDelay;
   let leftLabel, rightLabel;
 
   if (trial.swap && !trial.isPractice) {
-    leftOption = generateOptionHTML(trial.B_now, trial.B_delay, trial.delayMonth);
-    rightOption = generateOptionHTML(trial.A_now, trial.A_delay, trial.delayMonth);
+    leftNow = trial.B_now;
+    leftDelay = trial.B_delay;
+    rightNow = trial.A_now;
+    rightDelay = trial.A_delay;
     leftLabel = "选项 B";
     rightLabel = "选项 A";
   } else {
-    leftOption = generateOptionHTML(trial.A_now, trial.A_delay, trial.delayMonth);
-    rightOption = generateOptionHTML(trial.B_now, trial.B_delay, trial.delayMonth);
+    leftNow = trial.A_now;
+    leftDelay = trial.A_delay;
+    rightNow = trial.B_now;
+    rightDelay = trial.B_delay;
     leftLabel = "选项 A";
     rightLabel = "选项 B";
   }
 
-  optA.innerHTML = leftOption;
-  optB.innerHTML = rightOption;
+  optA.innerHTML = generateOptionHTML(leftNow, leftDelay, trial.delayMonth);
+  optB.innerHTML = generateOptionHTML(rightNow, rightDelay, trial.delayMonth);
   labelA.textContent = leftLabel;
   labelB.textContent = rightLabel;
 
   optA.classList.remove("selected");
   optB.classList.remove("selected");
 
-  // ✅ 如果是正式题，开始监听鼠标轨迹
+  // ✅ 启动鼠标追踪（含 AOI 计算）
   if (!trial.isPractice) {
-    const container = document.getElementById("experimentContainer");
-    const startTime = window.questionStartTime;
-
-    const recordMouse = (e) => {
-      if (!container.contains(e.target)) return;
-
-      const rect = container.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const timeSinceStart = Date.now() - startTime;
-
-      mouseTrajectories[currentIndex].push({
-        t: timeSinceStart,
-        x: Math.round(x),
-        y: Math.round(y)
-      });
-    };
-
-    window._currentMouseMoveHandler = recordMouse;
-    container.addEventListener('mousemove', recordMouse);
+    requestAnimationFrame(() => {
+      window.questionStartTime = Date.now();
+      startMouseTracking();
+    });
   }
+}
+
+// ✅ 增强版：记录 AOI
+function startMouseTracking() {
+  const container = document.getElementById("experimentContainer");
+  const startTime = window.questionStartTime;
+
+  // 获取当前选项的位置（必须在视觉渲染后）
+  const optA = document.getElementById("optA");
+  const optB = document.getElementById("optB");
+  const containerRect = container.getBoundingClientRect();
+  const rectA = optA.getBoundingClientRect();
+  const rectB = optB.getBoundingClientRect();
+
+  // 计算每个选项内的 AOI 边界（相对于 container）
+  const aoiA = {
+    left: rectA.left - containerRect.left,
+    right: rectA.right - containerRect.left,
+    top: rectA.top - containerRect.top,
+    bottom: rectA.bottom - containerRect.top,
+    midY: (rectA.top + rectA.bottom) / 2 - containerRect.top
+  };
+  const aoiB = {
+    left: rectB.left - containerRect.left,
+    right: rectB.right - containerRect.left,
+    top: rectB.top - containerRect.top,
+    bottom: rectB.bottom - containerRect.top,
+    midY: (rectB.top + rectB.bottom) / 2 - containerRect.top
+  };
+
+  const recordMouse = (e) => {
+    if (!container.contains(e.target)) return;
+    const x = e.clientX - containerRect.left;
+    const y = e.clientY - containerRect.top;
+    const t = Date.now() - startTime;
+
+    // 判断 AOI
+    let aoi = "none";
+    if (x >= aoiA.left && x <= aoiA.right && y >= aoiA.top && y <= aoiA.bottom) {
+      aoi = y < aoiA.midY ? "A_now" : "A_future";
+    } else if (x >= aoiB.left && x <= aoiB.right && y >= aoiB.top && y <= aoiB.bottom) {
+      aoi = y < aoiB.midY ? "B_now" : "B_future";
+    }
+
+    mouseTrajectories[currentIndex].push({
+      t: t,
+      x: Math.round(x),
+      y: Math.round(y),
+      aoi: aoi
+    });
+  };
+
+  window._currentMouseMoveHandler = recordMouse;
+  container.addEventListener('mousemove', recordMouse);
 }
 
 function chooseAndNext(choice) {
@@ -625,9 +663,6 @@ function goNext() {
 }
 
 function showRestPage() {
-  if (countdownInterval) clearInterval(countdownInterval);
-
-  // 进入休息前，清除鼠标监听
   if (window._currentMouseMoveHandler) {
     const container = document.getElementById("experimentContainer");
     container.removeEventListener('mousemove', window._currentMouseMoveHandler);
@@ -645,7 +680,6 @@ function showRestPage() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     countdownText.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-
     if (seconds <= 0) {
       clearInterval(countdownInterval);
       document.getElementById("continueButton").style.display = "inline-block";
@@ -661,7 +695,6 @@ function showRestPage() {
 function resumeAfterRest() {
   document.getElementById("rest").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
-
   if (currentIndex + 1 < trials.length) {
     showQuestion(currentIndex + 1);
   } else {
@@ -670,13 +703,11 @@ function resumeAfterRest() {
 }
 
 function finishExperiment() {
-  // 最后清除监听器
   if (window._currentMouseMoveHandler) {
     const container = document.getElementById("experimentContainer");
     container.removeEventListener('mousemove', window._currentMouseMoveHandler);
     window._currentMouseMoveHandler = null;
   }
-
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("finish").style.display = "block";
 }
@@ -713,16 +744,36 @@ function downloadData() {
   URL.revokeObjectURL(url);
 }
 
-// ✅ 新增：下载鼠标轨迹数据
+// ✅ 轨迹下载：包含 DiffAmount, DiffTime, aoi
 function downloadTrajectoryData() {
-  let csv = "participant_id,trial_index,t_ms,x,y\n";
+  let csv = "participant_id,trial_index,t_ms,x,y,DiffAmount,DiffTime,delay_month,aoi\n";
 
   const formalStart = practiceTrials.length;
   for (let i = formalStart; i < trials.length; i++) {
-    const trialId = trials[i].id;
+    const trial = trials[i];
     const traj = mouseTrajectories[i] || [];
+
+    // 获取左右选项的实际值（考虑 swap）
+    let leftNow, leftDelay, rightNow, rightDelay;
+    if (trial.swap) {
+      leftNow = trial.B_now; leftDelay = trial.B_delay;
+      rightNow = trial.A_now; rightDelay = trial.A_delay;
+    } else {
+      leftNow = trial.A_now; leftDelay = trial.A_delay;
+      rightNow = trial.B_now; rightDelay = trial.B_delay;
+    }
+
+    const amountLeft = leftNow + leftDelay;
+    const amountRight = rightNow + rightDelay;
+    const DiffAmount = amountRight - amountLeft;
+
+    const timeLeft = (leftNow !== 0) ? 0 : trial.delayMonth;
+    const timeRight = (rightNow !== 0) ? 0 : trial.delayMonth;
+    const DiffTime = timeRight - timeLeft;
+
     for (const point of traj) {
-      csv += `"${pid}",${trialId},${point.t},${point.x},${point.y}\n`;
+      const aoi = point.aoi || "none";
+      csv += `"${pid}",${trial.id},${point.t},${point.x},${point.y},${DiffAmount},${DiffTime},${trial.delayMonth},"${aoi}"\n`;
     }
   }
 
