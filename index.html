@@ -207,7 +207,7 @@
   <ul style="list-style-type: disc;">
     <li>前 <strong>6 道为练习题</strong>（用于熟悉任务）；</li>
     <li>随后是 <strong>正式题目</strong>（数据将被记录）；</li>
-    <li>实验结束后，请将实验数据下载并将数据发送至2537695699@qq.com，收到数据后将第一时间审核数据并为您发放实验报酬。</li>
+    <li>实验结束后，请将两份实验数据下载并将数据发送到2537695699@qq.com，收到数据后将第一时间审核问卷为您发放实验报酬。</li>
   </ul>
   <p><strong>任务说明：</strong><br>
      屏幕上将出现左右两个选项。每个选项包含两个时间点的金额变动（上方为“现在”，下方为“未来”）。<br>
@@ -264,8 +264,10 @@
 <div id="finish">
   <h2>实验已完成！</h2>
   <p>感谢您的认真参与！</p>
-  <p><strong>请将数据文件保存到本地并将数据上传到2537695699@qq.com。</strong></p>
-  <button onclick="downloadData()">下载实验数据</button>
+  <p><strong>请将以下两个数据文件都保存到本地，并发送到2537695699@qq.com。</strong></p>
+  <button onclick="downloadData()">下载选择结果数据</button>
+  <br><br>
+  <button onclick="downloadTrajectoryData()">下载鼠标轨迹数据</button>
 </div>
 
 <script>
@@ -441,7 +443,8 @@ function shuffleArray(array) {
 
 let trials = [];
 let responses = [];
-let reactionTimes = []; // 记录正式题反应时
+let reactionTimes = [];
+let mouseTrajectories = []; // 新增：存储每题的鼠标轨迹
 let currentIndex = -1;
 let pid = "";
 let isClickable = true;
@@ -481,6 +484,7 @@ function startExperiment() {
   trials = [...practice, ...formalShuffled];
   responses = new Array(trials.length).fill(null);
   reactionTimes = new Array(trials.length).fill(null);
+  mouseTrajectories = new Array(trials.length).fill(null).map(() => []); // 初始化轨迹数组
 
   document.getElementById("intro").style.display = "none";
   document.getElementById("experimentContainer").style.display = "block";
@@ -496,6 +500,13 @@ function startFormalExperiment() {
 }
 
 function showQuestion(index) {
+  // 清除上一题的鼠标监听器
+  if (window._currentMouseMoveHandler) {
+    const prevContainer = document.getElementById("experimentContainer");
+    prevContainer.removeEventListener('mousemove', window._currentMouseMoveHandler);
+    window._currentMouseMoveHandler = null;
+  }
+
   currentIndex = index;
   isClickable = true;
   const trial = trials[index];
@@ -508,7 +519,7 @@ function showQuestion(index) {
     const totalFormal = trials.length - practiceTrials.length;
     progressText.textContent = `进度：${formalIndex} / ${totalFormal}`;
 
-    // ✅ 仅正式题记录开始时间
+    // ✅ 仅正式题记录开始时间（用于 RT 和轨迹时间基准）
     window.questionStartTime = Date.now();
   }
 
@@ -539,6 +550,30 @@ function showQuestion(index) {
 
   optA.classList.remove("selected");
   optB.classList.remove("selected");
+
+  // ✅ 如果是正式题，开始监听鼠标轨迹
+  if (!trial.isPractice) {
+    const container = document.getElementById("experimentContainer");
+    const startTime = window.questionStartTime;
+
+    const recordMouse = (e) => {
+      if (!container.contains(e.target)) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const timeSinceStart = Date.now() - startTime;
+
+      mouseTrajectories[currentIndex].push({
+        t: timeSinceStart,
+        x: Math.round(x),
+        y: Math.round(y)
+      });
+    };
+
+    window._currentMouseMoveHandler = recordMouse;
+    container.addEventListener('mousemove', recordMouse);
+  }
 }
 
 function chooseAndNext(choice) {
@@ -552,8 +587,6 @@ function chooseAndNext(choice) {
     actualChoice = choice;
   } else {
     actualChoice = trial.swap ? (choice === 'A' ? 'B' : 'A') : choice;
-
-    // ✅ 保存反应时
     const rt = Date.now() - window.questionStartTime;
     reactionTimes[currentIndex] = rt;
   }
@@ -594,9 +627,16 @@ function goNext() {
 function showRestPage() {
   if (countdownInterval) clearInterval(countdownInterval);
 
+  // 进入休息前，清除鼠标监听
+  if (window._currentMouseMoveHandler) {
+    const container = document.getElementById("experimentContainer");
+    container.removeEventListener('mousemove', window._currentMouseMoveHandler);
+    window._currentMouseMoveHandler = null;
+  }
+
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("rest").style.display = "block";
-  document.getElementById("continueButton").style.display = "none"; // 初始隐藏
+  document.getElementById("continueButton").style.display = "none";
 
   let seconds = 60;
   const countdownText = document.getElementById("countdownText");
@@ -608,7 +648,6 @@ function showRestPage() {
 
     if (seconds <= 0) {
       clearInterval(countdownInterval);
-      // ✅ 倒计时结束，显示“开始答题”按钮
       document.getElementById("continueButton").style.display = "inline-block";
     } else {
       seconds--;
@@ -624,13 +663,20 @@ function resumeAfterRest() {
   document.getElementById("experimentContainer").style.display = "block";
 
   if (currentIndex + 1 < trials.length) {
-    showQuestion(currentIndex + 1); // 此刻才开始下一题，并记录 RT
+    showQuestion(currentIndex + 1);
   } else {
     finishExperiment();
   }
 }
 
 function finishExperiment() {
+  // 最后清除监听器
+  if (window._currentMouseMoveHandler) {
+    const container = document.getElementById("experimentContainer");
+    container.removeEventListener('mousemove', window._currentMouseMoveHandler);
+    window._currentMouseMoveHandler = null;
+  }
+
   document.getElementById("experimentContainer").style.display = "none";
   document.getElementById("finish").style.display = "block";
 }
@@ -666,8 +712,31 @@ function downloadData() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ✅ 新增：下载鼠标轨迹数据
+function downloadTrajectoryData() {
+  let csv = "participant_id,trial_index,t_ms,x,y\n";
+
+  const formalStart = practiceTrials.length;
+  for (let i = formalStart; i < trials.length; i++) {
+    const trialId = trials[i].id;
+    const traj = mouseTrajectories[i] || [];
+    for (const point of traj) {
+      csv += `"${pid}",${trialId},${point.t},${point.x},${point.y}\n`;
+    }
+  }
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${pid}_mouse_trajectory.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 </script>
 
 </body>
 </html>
-
