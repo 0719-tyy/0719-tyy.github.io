@@ -1,138 +1,397 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>跨期决策滴定实验（最终修正版）</title>
-<style>
-body{font-family:Arial,Helvetica,sans-serif;margin:40px}
-h2{margin-bottom:10px}
-.option-btn{display:block;width:600px;margin:15px 0;padding:18px;font-size:18px;text-align:left;cursor:pointer}
-.option-btn:hover{background:#f2f2f2}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>时间偏好滴定实验</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hidden { display: none; }
+    .instruction-page {
+      text-align: center;
+      padding: 40px 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .instruction-page h2 {
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    .instruction-page p {
+      line-height: 1.6;
+      margin: 15px 0;
+      color: #444;
+    }
+    input#subjectId {
+      padding: 10px;
+      font-size: 18px;
+      width: 220px;
+      text-align: center;
+      margin: 15px 0;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+    }
+    input#subjectId:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    .hint {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .error {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    button.start-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 30px;
+      font-size: 18px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button.start-btn:hover {
+      background: #218838;
+    }
+
+    /* 实验主界面样式 */
+    .instruction {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .trial-info {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 16px;
+      color: #555;
+    }
+    .options {
+      display: flex;
+      justify-content: space-around;
+      gap: 30px;
+      margin: 30px 0;
+    }
+    .option {
+      width: 40%;
+      padding: 20px;
+      background: white;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option:hover {
+      border-color: #007bff;
+      background-color: #f0f8ff;
+    }
+    .option h3 {
+      margin: 0 0 15px;
+      color: #007bff;
+    }
+    .amount {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    .now { color: #28a745; }
+    .delay { color: #dc3545; }
+    #results {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 18px;
+      color: #28a745;
+    }
+    button.task-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button.task-btn:hover { background: #218838; }
+  </style>
 </head>
 <body>
-<h2>跨期决策任务</h2>
-<div id="trial"></div>
-<pre id="result"></pre>
+
+<!-- 指导语界面 -->
+<div id="welcomePage" class="instruction-page">
+  <h2>时间偏好决策实验</h2>
+  <p>欢迎您参与本次心理学实验！</p>
+  <p>本实验包含多个决策任务，您需要在“现在获得/损失金额”和“未来获得/损失金额”之间做出选择。</p>
+  <p>请根据您的真实偏好进行选择。</p>
+
+  <p><strong>请输入您的实验编号（用于保存数据）：</strong></p>
+  <input type="text" id="subjectId" maxlength="20" placeholder="例如：LXM1745 ">
+  <div class="hint">建议格式：姓名首字母 + 4位时间数（如1745）</div>
+  <div id="idError" class="error"></div>
+
+  <button class="start-btn" onclick="startExperiment()">开始实验</button>
+</div>
+
+<!-- 实验主界面 -->
+<div id="experimentPage" class="hidden">
+  <div class="instruction">
+    <h2>时间偏好决策任务</h2>
+    <p>请选择您更偏好的选项（A 或 B）：</p>
+  </div>
+
+  <div class="trial-info" id="trialInfo"></div>
+
+  <div class="options" id="optionsContainer">
+    <div class="option" id="optionA" onclick="choose('A')">
+      <h3>选项 A</h3>
+      <div class="amount now" id="aNow"></div>
+      <div class="amount delay" id="aDelay"></div>
+    </div>
+    <div class="option" id="optionB" onclick="choose('B')">
+      <h3>选项 B</h3>
+      <div class="amount now" id="bNow"></div>
+      <div class="amount delay" id="bDelay"></div>
+    </div>
+  </div>
+
+  <button id="nextBtn" class="task-btn hidden" onclick="nextCondition()">继续下一组</button>
+  <div id="results" class="hidden"></div>
+</div>
 
 <script>
-/**********************
- * 金额显示规则
- **********************/
-const gainPhases = ["only gain","gain consistent","gain inconsistent"];
-function moneyText(x, phase){
-  if(x===0) return gainPhases.includes(phase)?"获得 0 元":"支付 0 元";
-  return x>0?`获得 ${x} 元`:`支付 ${Math.abs(x)} 元`;
-}
-
-/**********************
- * 主干题目（18 条）
- **********************/
-let trials = [
-// only gain
-{phase:"only gain",A_now:40,A_delay:0,B_now:0,B_delay:80,delay:"1个月后"},
-{phase:"only gain",A_now:200,A_delay:0,B_now:0,B_delay:400,delay:"1年后"},
-{phase:"only gain",A_now:600,A_delay:0,B_now:0,B_delay:1200,delay:"3年后"},
-// only loss
-{phase:"only loss",A_now:0,A_delay:-40,B_now:0,B_delay:-80,delay:"1个月后"},
-{phase:"only loss",A_now:0,A_delay:-200,B_now:0,B_delay:-400,delay:"1年后"},
-{phase:"only loss",A_now:0,A_delay:-600,B_now:0,B_delay:-1200,delay:"3年后"},
-// gain consistent
-{phase:"gain consistent",A_now:60,A_delay:0,B_now:100,B_delay:80,delay:"1个月后"},
-{phase:"gain consistent",A_now:300,A_delay:0,B_now:500,B_delay:400,delay:"1年后"},
-{phase:"gain consistent",A_now:900,A_delay:0,B_now:1500,B_delay:1200,delay:"3年后"},
-// gain inconsistent
-{phase:"gain inconsistent",A_now:60,A_delay:0,B_now:100,B_delay:-80,delay:"1个月后"},
-{phase:"gain inconsistent",A_now:300,A_delay:0,B_now:500,B_delay:-400,delay:"1年后"},
-{phase:"gain inconsistent",A_now:900,A_delay:0,B_now:1500,B_delay:-1200,delay:"3年后"},
-// loss consistent
-{phase:"loss consistent",A_now:0,A_delay:-100,B_now:-60,B_delay:-80,delay:"1个月后"},
-{phase:"loss consistent",A_now:0,A_delay:-500,B_now:-300,B_delay:-400,delay:"1年后"},
-{phase:"loss consistent",A_now:0,A_delay:-1500,B_now:-900,B_delay:-1200,delay:"3年后"},
-// loss inconsistent
-{phase:"loss inconsistent",A_now:0,A_delay:-100,B_now:60,B_delay:-80,delay:"1个月后"},
-{phase:"loss inconsistent",A_now:0,A_delay:-500,B_now:300,B_delay:-400,delay:"1年后"},
-{phase:"loss inconsistent",A_now:0,A_delay:-1500,B_now:900,B_delay:-1200,delay:"3年后"}
+// ==================== 全局变量 ====================
+let subjectId = '';
+const PHASES = [
+  'only gain',
+  'only loss',
+  'gain consistent',
+  'gain inconsistent',
+  'loss consistent',
+  'loss inconsistent'
 ];
 
-// 随机顺序
-for(let i=trials.length-1;i>0;i--){
-  const j=Math.floor(Math.random()*(i+1));
-  [trials[i],trials[j]]=[trials[j],trials[i]];
-}
+const CONFIG = {
+  'only gain': [[40, 0, 0, 80], [200, 0, 0, 400], [600, 0, 0, 1200]],
+  'only loss': [[-40, 0, 0, -80], [-200, 0, 0, -400], [-600, 0, 0, -1200]],
+  'gain consistent': [[60, 0, 100, 80], [300, 0, 500, 400], [900, 0, 1500, 1200]],
+  'gain inconsistent': [[60, 0, 100, -80], [300, 0, 500, -400], [900, 0, 1500, -1200]],
+  'loss consistent': [[-100, 0, -60, -80], [-500, 0, -300, -400], [-1500, 0, -900, -1200]],
+  'loss inconsistent': [[-100, 0, 60, -80], [-500, 0, 300, -400], [-1500, 0, 900, -1200]]
+};
 
-let tIndex=0, step=1, maxStep=6;
-let records=[];
+// 实验状态
+let currentPhaseIndex = 0;
+let currentDelayIndex = 0;
+let trialCount = 0;
+let startTime = null;
+let A_now = 0, A_delay = 0, B_now = 0, B_delay = 0, phase = '', delayLabel = '';
+let initial_A = 0, step = 0, lastChoice = null, hasReversed = false;
+let accepted = null, rejected = null;
+let allData = [], A_now_history = [];
 
-/**********************
- * 呈现
- **********************/
-function render(){
-  if(tIndex>=trials.length){
-    document.getElementById('trial').innerHTML='<h3>实验结束，感谢参与</h3>';
-    document.getElementById('result').textContent=JSON.stringify(records,null,2);
+// ==================== 开始实验 ====================
+function startExperiment() {
+  const input = document.getElementById('subjectId').value.trim();
+  const errorDiv = document.getElementById('idError');
+  errorDiv.textContent = '';
+
+  if (input === '') {
+    errorDiv.textContent = '❌ 请输入一个实验编号（不能为空）';
     return;
   }
-  const t=trials[tIndex];
 
-  if(t.adjust===undefined){
-    if(gainPhases.includes(t.phase)){
-      t.adjust = Math.abs(Math.abs(t.B_delay) - t.A_now)/2;
-    }else{
-      t.adjust = Math.abs(Math.abs(t.B_delay) - Math.abs(t.A_delay))/2;
+  // 清理文件名：只保留字母、数字、下划线、连字符，最多30字符
+  subjectId = input.replace(/[^a-zA-Z0-9_\-]/g, '').substring(0, 30) || 'participant';
+
+  // 切换界面
+  document.getElementById('welcomePage').classList.add('hidden');
+  document.getElementById('experimentPage').classList.remove('hidden');
+
+  initCondition();
+}
+
+// ==================== 原有实验逻辑（保持不变） ====================
+function initCondition() {
+  phase = PHASES[currentPhaseIndex];
+  const delays = ['1 month', '1 year', '3 years'];
+  delayLabel = delays[currentDelayIndex];
+
+  [A_now, A_delay, B_now, B_delay] = CONFIG[phase][currentDelayIndex].map(x => parseFloat(x));
+  initial_A = A_now;
+  step = Math.abs(initial_A) / 2;
+
+  trialCount = 0;
+  lastChoice = null;
+  hasReversed = false;
+  accepted = null;
+  rejected = null;
+  A_now_history = [];
+
+  updateDisplay();
+}
+
+function updateDisplay() {
+  document.getElementById('aNow').textContent = `现在: ${formatAmount(A_now)}`;
+  document.getElementById('aDelay').textContent = `${getDelayText()}: ${formatAmount(A_delay)}`;
+  document.getElementById('bNow').textContent = `现在: ${formatAmount(B_now)}`;
+  document.getElementById('bDelay').textContent = `${getDelayText()}: ${formatAmount(B_delay)}`;
+
+  document.getElementById('trialInfo').textContent =
+    `阶段: ${phase} | 延迟: ${delayLabel} | 第 ${trialCount + 1}/6 次选择`;
+
+  startTime = performance.now();
+}
+
+function formatAmount(val) {
+  return val >= 0 ? `+${val}` : `${val}`;
+}
+
+function getDelayText() {
+  return delayLabel === '1 month' ? '1个月后' :
+         delayLabel === '1 year'  ? '1年后'  :
+                                    '3年后';
+}
+
+function choose(choice) {
+  const rt = (performance.now() - startTime) / 1000;
+  A_now_history.push(A_now);
+
+  allData.push({
+    subject_id: subjectId,
+    phase,
+    delay_time: delayLabel,
+    trial: trialCount + 1,
+    A_now,
+    A_delay,
+    B_now,
+    B_delay,
+    choice,
+    reaction_time_sec: rt.toFixed(3),
+    is_reversal: false
+  });
+
+  const isReversal = (lastChoice !== null && lastChoice !== choice);
+  if (isReversal && !hasReversed) {
+    hasReversed = true;
+    if (lastChoice === 'A') {
+      accepted = A_now_history[trialCount - 1];
+      rejected = A_now;
+    } else {
+      rejected = A_now_history[trialCount - 1];
+      accepted = A_now;
+    }
+    allData[allData.length - 1].is_reversal = true;
+  }
+
+  if (choice === 'A') accepted = A_now;
+  else rejected = A_now;
+
+  lastChoice = choice;
+  trialCount++;
+
+  if (trialCount >= 6) {
+    finishCondition();
+    return;
+  }
+
+  if (!hasReversed) {
+    if (['only gain', 'gain consistent', 'gain inconsistent'].includes(phase)) {
+      A_now = choice === 'A' ? A_now - step : A_now + step;
+    } else {
+      A_now = choice === 'A' ? A_now - step : A_now + step;
+    }
+    step /= 2;
+  } else {
+    if (accepted !== null && rejected !== null) {
+      A_now = (accepted + rejected) / 2;
     }
   }
 
-  document.getElementById('trial').innerHTML = `
-    <p><strong>${t.phase}</strong> ｜ 第 ${step} / 6 次选择</p>
-    <button class="option-btn" onclick="choose('A')">
-      A：现在 ${moneyText(t.A_now,t.phase)}；${t.delay} ${moneyText(t.A_delay,t.phase)}
-    </button>
-    <button class="option-btn" onclick="choose('B')">
-      B：现在 ${moneyText(t.B_now,t.phase)}；${t.delay} ${moneyText(t.B_delay,t.phase)}
-    </button>`;
+  updateDisplay();
 }
 
-/**********************
- * 选择与滴定更新（最终修正）
- **********************/
-function choose(choice){
-  const t=trials[tIndex];
-  const d=Math.abs(t.adjust);
-
-  records.push({phase:t.phase,step,choice,A_now:t.A_now,A_delay:t.A_delay});
-
-  // gain phases
-  if(t.phase==="only gain"||t.phase==="gain consistent"||t.phase==="gain inconsistent"){
-    if(choice==='A') t.A_now -= d;
-    else t.A_now += d;
+function finishCondition() {
+  let indifference_estimate;
+  if (hasReversed && accepted !== null && rejected !== null) {
+    indifference_estimate = ((accepted + rejected) / 2).toFixed(2);
+  } else {
+    indifference_estimate = A_now.toFixed(2);
   }
 
-  // only loss
-  if(t.phase==="only loss"){
-    if(choice==='A') t.A_delay = - (Math.abs(t.A_delay)+d);
-    else t.A_delay = - (Math.abs(t.A_delay)-d);
+  const startIndex = allData.length - 6;
+  for (let i = startIndex; i < allData.length; i++) {
+    allData[i].indifference_estimate = indifference_estimate;
   }
 
-  // loss consistent
-  if(t.phase==="loss consistent"){
-    if(choice==='A') t.A_delay = - (Math.abs(t.A_delay)+d);
-    else t.A_delay = - (Math.abs(t.A_delay)-d);
+  document.getElementById('optionsContainer').classList.add('hidden');
+  document.getElementById('trialInfo').textContent = `✅ 完成：${phase} - ${delayLabel}`;
+
+  let nextDelayIndex = currentDelayIndex + 1;
+  let nextPhaseIndex = currentPhaseIndex;
+  if (nextDelayIndex >= 3) {
+    nextDelayIndex = 0;
+    nextPhaseIndex++;
   }
 
-  // loss inconsistent
-  if(t.phase==="loss inconsistent"){
-    if(choice==='A') t.A_delay = - (Math.abs(t.A_delay)+d);
-    else t.A_delay = - (Math.abs(t.A_delay)-d);
+  if (nextPhaseIndex >= PHASES.length) {
+    downloadResults();
+  } else {
+    document.getElementById('nextBtn').classList.remove('hidden');
   }
-
-  t.adjust /= 2;
-  step++;
-  if(step>maxStep){ step=1; tIndex++; }
-  render();
 }
 
-render();
+function nextCondition() {
+  document.getElementById('optionsContainer').classList.remove('hidden');
+  document.getElementById('nextBtn').classList.add('hidden');
+
+  currentDelayIndex++;
+  if (currentDelayIndex >= 3) {
+    currentDelayIndex = 0;
+    currentPhaseIndex++;
+  }
+  initCondition();
+}
+
+function downloadResults() {
+  let csv = "subject_id,phase,delay_time,trial,A_now,A_delay,B_now,B_delay,choice,reaction_time_sec,is_reversal,indifference_estimate\n";
+  allData.forEach(r => {
+    csv += `"${r.subject_id}","${r.phase}",${r.delay_time},${r.trial},${r.A_now},${r.A_delay},${r.B_now},${r.B_delay},${r.choice},${r.reaction_time_sec},${r.is_reversal},${r.indifference_estimate}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  // 安全的文件名（已清理）
+  const filename = `${subjectId}_time_preference_data.csv`;
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  document.getElementById('trialInfo').textContent = "🎉 实验已完成！数据已自动下载。";
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').textContent = "感谢您的参与！";
+}
 </script>
+
 </body>
 </html>
