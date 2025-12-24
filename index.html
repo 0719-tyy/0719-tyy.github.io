@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>跨期偏好实验</title>
+  <title>跨期偏好实验（含鼠标轨迹记录）</title>
   <style>
     * {
       box-sizing: border-box;
@@ -267,8 +267,9 @@
   <div id="finish" class="page">
     <h2>全部实验已完成！</h2>
     <p>感谢您的认真参与！</p>
-    <p><strong>请下载实验数据并发送至2537695699@qq.com</strong></p>
-    <button onclick="downloadData()">下载选择结果与元数据</button>
+    <p><strong>请下载两份数据并发送至2537695699@qq.com</strong></p>
+    <button onclick="downloadData()">下载选择结果与元数据</button><br><br>
+    <button onclick="downloadMouseTrailData()">下载鼠标轨迹数据（推荐使用）</button>
   </div>
 
 </div>
@@ -296,7 +297,7 @@ const CONFIG = {
 
 let allConditions = [];
 let conditionSequence = [];
-let groupIndex = 0; // 0 ~ 17 (18 groups × 6 trials = 108)
+let groupIndex = 0;
 let trialsInCurrentGroup = 0;
 
 let completedTrials = 0;
@@ -307,7 +308,6 @@ const TOTAL_TRIALS = TOTAL_FORMAL_TRIALS + TOTAL_ATTENTION_CHECKS;
 let startTime = null;
 let A_now = 0, A_delay = 0, B_now = 0, B_delay = 0, phase = '', delayLabel = '';
 
-// 滴定状态
 let initial_A = 0;
 let current_A = 0;
 let step = 0;
@@ -322,9 +322,11 @@ let practiceTrials = [];
 let practiceTrialIndex = 0;
 
 let allData = [];
+let mouseTrailData = []; // ✅ 新增：专门存储轨迹点
+let positionSequence = [];
 
-// ✅ 关键修复1：补全缺失变量
-let positionSequence = []; // 用于记录每组6题的左右位置序列
+let mouseTrail = [];
+let isTrackingMouse = false;
 
 // ==================== 工具函数 ====================
 function shuffleArray(array) {
@@ -339,6 +341,11 @@ function getDelayText(label) {
   return label === '1 month' ? '1个月后' :
          label === '1 year'  ? '1年后'  :
                                 '3年后';
+}
+
+function getDelayMonths(label) {
+  return label === '1 month' ? 1 :
+         label === '1 year'  ? 12 : 36;
 }
 
 function generateAllConditions() {
@@ -431,12 +438,16 @@ function loadPracticeTrial() {
   document.getElementById('progressText').textContent = `练习 第 ${practiceTrialIndex + 1} 题（共 6 题）`;
 
   renderOptions();
+
+  mouseTrail = [];
+  isTrackingMouse = true;
 }
 
 function startFormalExperiment() {
   isPractice = false;
   completedTrials = 0;
   allData = [];
+  mouseTrailData = []; // ✅ 清空轨迹数据
   groupIndex = 0;
   trialsInCurrentGroup = 0;
 
@@ -470,44 +481,54 @@ function loadAttentionCheck() {
   renderOptions();
   document.getElementById('progressText').textContent = `进度：${completedTrials + 1} / ${TOTAL_TRIALS}`;
   startTime = performance.now();
+
+  mouseTrail = [];
+  isTrackingMouse = true;
 }
 
-// ==================== 核心：加载下一题（含休息触发）====================
+// ==================== 核心：加载下一题 ====================
 function loadNextTrial() {
-  // 检查是否刚完成一组（6题）
+  if (completedTrials >= TOTAL_TRIALS) {
+    showPage('finish');
+    return;
+  }
+
   if (trialsInCurrentGroup === 6) {
     groupIndex++;
     trialsInCurrentGroup = 0;
 
-    // 👇 在第6组（36题）、第12组（72题）完成后触发休息
     if (groupIndex === 6 || groupIndex === 12) {
       startRestPeriod();
       return;
     }
 
-    // 插入注意力检测题
-    const shouldInsertAttention = [2, 8, 14].includes(groupIndex);
-    if (shouldInsertAttention) {
+    if ([2, 8, 14].includes(groupIndex)) {
       loadAttentionCheck();
+      showPage('experiment');
       return;
     }
 
-    if (groupIndex >= 18) {
+    if (groupIndex >= conditionSequence.length) {
       showPage('finish');
       return;
     }
   }
 
-  // 初始化新组的滴定参数
   if (trialsInCurrentGroup === 0) {
     const cond = conditionSequence[groupIndex];
+    if (!cond) {
+      console.error('Condition missing for groupIndex:', groupIndex);
+      showPage('finish');
+      return;
+    }
+
     phase = cond.phase;
     delayLabel = cond.delayLabel;
     const delayIndex = cond.delayIndex;
 
     const config = CONFIG[phase][delayIndex];
-    A_delay = config[1]; // 通常是 0
-    B_now = config[2];   // 通常是 0
+    A_delay = config[1];
+    B_now = config[2];
     B_delay = config[3];
 
     initial_A = config[0];
@@ -532,6 +553,10 @@ function loadNextTrial() {
 
   startTime = performance.now();
   renderOptions();
+  showPage('experiment');
+
+  mouseTrail = [];
+  isTrackingMouse = true;
 }
 
 // ==================== 渲染选项 ====================
@@ -582,8 +607,23 @@ function renderOptions() {
   document.querySelector('.option-container:nth-child(2) .option-label').textContent = "选项 B";
 }
 
+// ==================== 鼠标移动监听 ====================
+document.addEventListener('mousemove', function(e) {
+  if (!isTrackingMouse) return;
+
+  const container = document.querySelector('.container');
+  const rect = container.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const time = performance.now() - startTime;
+
+  mouseTrail.push({ x: Math.round(x), y: Math.round(y), t: Math.round(time) });
+});
+
 // ==================== 选择处理 ====================
 function chooseOption(side) {
+  isTrackingMouse = false;
+
   if (isPractice) {
     practiceTrialIndex++;
     loadPracticeTrial();
@@ -595,6 +635,22 @@ function chooseOption(side) {
     const choice = clickedIsLeft ? 'A' : 'B';
     const rt = (performance.now() - startTime) / 1000;
     const isCorrect = (choice === 'A');
+
+    // 👇 保存轨迹点到 mouseTrailData
+    const delayMonths = getDelayMonths(delayLabel);
+    const DiffAmount = Math.abs(100 - (-500)); // A_now - B_now = 100 - (-500) = 600
+    mouseTrail.forEach(pt => {
+      mouseTrailData.push({
+        participant_id: subjectId,
+        trial_index: completedTrials + 1,
+        t_ms: pt.t,
+        x: pt.x,
+        y: pt.y,
+        DiffAmount,
+        DiffTime: 1,
+        delay_month: delayMonths
+      });
+    });
 
     allData.push({
       subject_id: subjectId,
@@ -611,7 +667,8 @@ function chooseOption(side) {
       block_index: Math.floor(groupIndex / 6) + 1,
       indifference_estimate: '',
       is_attention: true,
-      attention_correct: isCorrect
+      attention_correct: isCorrect,
+      mouse_trail: JSON.stringify(mouseTrail)
     });
 
     completedTrials++;
@@ -625,40 +682,52 @@ function chooseOption(side) {
   handleChoice(choice);
 }
 
+// ✅ 修正后的滴定逻辑 —— 完全按照你提供的标准实现
 function handleChoice(choice) {
+  if (trialsInCurrentGroup >= 6) return;
+
   const rt = (performance.now() - startTime) / 1000;
-  A_now_history.push(current_A);
+  A_now_history.push(A_now);
 
   const isReversal = (lastChoice !== null && lastChoice !== choice);
   if (isReversal && !hasReversed) {
     hasReversed = true;
     if (lastChoice === 'A') {
       accepted = A_now_history[A_now_history.length - 2];
-      rejected = current_A;
+      rejected = A_now;
     } else {
       rejected = A_now_history[A_now_history.length - 2];
-      accepted = current_A;
+      accepted = A_now;
     }
   }
 
   if (choice === 'A') {
-    current_A = current_A - step;
+    accepted = A_now;
   } else {
-    current_A = current_A + step;
+    rejected = A_now;
   }
 
-  if (isReversal) {
-    step = step / 2;
-  }
-
-  const actual_A_now = A_now_history[A_now_history.length - 1];
+  const DiffAmount = Math.abs(A_now - B_now);
+  const delayMonths = getDelayMonths(delayLabel);
+  mouseTrail.forEach(pt => {
+    mouseTrailData.push({
+      participant_id: subjectId,
+      trial_index: completedTrials + 1,
+      t_ms: pt.t,
+      x: pt.x,
+      y: pt.y,
+      DiffAmount,
+      DiffTime: 1,
+      delay_month: delayMonths
+    });
+  });
 
   allData.push({
     subject_id: subjectId,
     phase,
     delay_time: delayLabel,
     trial: completedTrials + 1,
-    A_now: actual_A_now,
+    A_now,
     A_delay,
     B_now,
     B_delay,
@@ -666,19 +735,37 @@ function handleChoice(choice) {
     reaction_time_sec: rt.toFixed(3),
     is_reversal: isReversal,
     block_index: Math.floor(groupIndex / 6) + 1,
-    is_attention: false
+    is_attention: false,
+    mouse_trail: JSON.stringify(mouseTrail)
   });
 
   lastChoice = choice;
   trialsInCurrentGroup++;
   completedTrials++;
 
-  if (trialsInCurrentGroup >= 6) {
-    let indifference_estimate = '';
-    if (accepted !== null && rejected !== null) {
+  if (trialsInCurrentGroup < 6) {
+    if (!hasReversed) {
+      if (choice === 'A') {
+        current_A = current_A - step;
+      } else {
+        current_A = current_A + step;
+      }
+      step = step / 2;
+    } else {
+      if (accepted !== null && rejected !== null) {
+        current_A = (accepted + rejected) / 2;
+      } else {
+        current_A = A_now;
+      }
+    }
+  }
+
+  if (trialsInCurrentGroup === 6) {
+    let indifference_estimate;
+    if (hasReversed && accepted !== null && rejected !== null) {
       indifference_estimate = ((accepted + rejected) / 2).toFixed(2);
     } else {
-      indifference_estimate = (actual_A_now).toFixed(2);
+      indifference_estimate = (accepted !== null ? accepted : A_now).toFixed(2);
     }
 
     const startIndex = allData.length - 6;
@@ -709,7 +796,8 @@ function downloadData() {
     "block_index",
     "indifference_estimate",
     "is_attention",
-    "attention_correct"
+    "attention_correct",
+    "mouse_trail"
   ].join(",");
 
   const rows = allData.map(e => {
@@ -728,7 +816,8 @@ function downloadData() {
       e.block_index,
       e.indifference_estimate || '',
       e.is_attention ? 'true' : 'false',
-      e.attention_correct !== undefined ? (e.attention_correct ? 'true' : 'false') : ''
+      e.attention_correct !== undefined ? (e.attention_correct ? 'true' : 'false') : '',
+      `"${e.mouse_trail.replace(/"/g, '""')}"`
     ].join(",");
   }).join("\n");
 
@@ -737,6 +826,33 @@ function downloadData() {
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
   link.setAttribute("download", `${subjectId}_experiment_data.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ✅ 新增：单独下载鼠标轨迹数据
+function downloadMouseTrailData() {
+  const header = ["participant_id", "trial_index", "t_ms", "x", "y", "DiffAmount", "DiffTime", "delay_month"].join(",");
+
+  const rows = mouseTrailData.map(pt => {
+    return [
+      pt.participant_id,
+      pt.trial_index,
+      pt.t_ms,
+      pt.x,
+      pt.y,
+      pt.DiffAmount,
+      pt.DiffTime,
+      pt.delay_month
+    ].join(",");
+  }).join("\n");
+
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + header + "\n" + rows;
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `${subjectId}_mouse_trail.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
